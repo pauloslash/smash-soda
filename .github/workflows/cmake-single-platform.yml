@@ -26,7 +26,7 @@ jobs:
 
       - name: Add upstream and fetch
         run: |
-          git remote add upstream https://github.com/soda-arcade/smash-soda.git
+          git remote add upstream https://github.com/pauloslash/smash-soda.git
           git fetch upstream
 
       - name: Compare commits
@@ -48,10 +48,6 @@ jobs:
         run: |
           git checkout master
           git merge upstream/master
-
-      - name: Push changes to your fork
-        run: |
-          git push origin master
 
       - name: Set up MSYS2
         uses: msys2/setup-msys2@v2
@@ -81,4 +77,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: smash-soda
-          path: build/smash-soda.exe
+          path: build/*.exe

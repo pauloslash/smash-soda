@@ -1,39 +1,84 @@
-# This starter workflow is for a CMake project running on a single platform. There is a different starter workflow if you need cross-platform coverage.
-# See: https://github.com/actions/starter-workflows/blob/main/ci/cmake-multi-platform.yml
-name:  Build Smash Soda
+name: Sync and Build Smash Soda from Upstream
 
 on:
-  push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
+  schedule:
+    - cron: '0 3 * * *'  # Diariamente às 03:00 UTC
   workflow_dispatch:
 
 env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
 
 jobs:
-  build:
+  sync-and-build:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout your fork
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set Git user
+        run: |
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "GitHub Actions"
+
+      - name: Add upstream and fetch
+        run: |
+          git remote add upstream https://github.com/soda-arcade/smash-soda.git
+          git fetch upstream
+
+      - name: Compare commits
+        id: compare
+        run: |
+          UPSTREAM_COMMIT=$(git rev-parse upstream/master)
+          ORIGIN_COMMIT=$(git rev-parse origin/master)
+          if [ "$UPSTREAM_COMMIT" != "$ORIGIN_COMMIT" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Exit if no changes
+        if: steps.compare.outputs.changed == 'false'
+        run: exit 0
+
+      - name: Merge upstream/master into local master
+        run: |
+          git checkout master
+          git merge upstream/master
+
+      - name: Push changes to your fork
+        run: |
+          git push origin master
 
       - name: Set up MSYS2
         uses: msys2/setup-msys2@v2
         with:
+          msystem: MINGW64
+          update: true
           install: >-
             mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-make
             mingw-w64-x86_64-SDL2
             mingw-w64-x86_64-SDL2_image
             mingw-w64-x86_64-SDL2_mixer
             mingw-w64-x86_64-SDL2_ttf
-          msystem: MINGW64
-          update: true
 
-      - name: Compile
+      - name: Configure CMake
         shell: msys2 {0}
         run: |
-          g++ src/main.cpp -o smash-soda.exe \
-            -lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_mixer -lSDL2_ttf
+          cmake -S ParsecSoda -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
+
+      - name: Build
+        shell: msys2 {0}
+        run: |
+          cmake --build build --config ${BUILD_TYPE}
+
+      - name: Upload Executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: smash-soda
+          path: build/smash-soda.exe

@@ -31,13 +31,14 @@ jobs:
 
       - name: Compare commits
         id: compare
+        shell: bash  # << CORRIGIDO: necessário para usar sintaxe bash
         run: |
           UPSTREAM_COMMIT=$(git rev-parse upstream/master)
           ORIGIN_COMMIT=$(git rev-parse origin/master)
           if [ "$UPSTREAM_COMMIT" != "$ORIGIN_COMMIT" ]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           else
-            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Exit if no changes
@@ -66,12 +67,12 @@ jobs:
       - name: Configure CMake
         shell: msys2 {0}
         run: |
-          cmake -S ParsecSoda -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
+          cmake -S ParsecSoda -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=$BUILD_TYPE
 
       - name: Build
         shell: msys2 {0}
         run: |
-          cmake --build build --config ${BUILD_TYPE}
+          cmake --build build --config $BUILD_TYPE
 
       - name: Upload Executable
         uses: actions/upload-artifact@v4

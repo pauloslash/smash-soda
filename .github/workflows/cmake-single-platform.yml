@@ -35,7 +35,7 @@ jobs:
         run: |
           UPSTREAM_COMMIT=$(git rev-parse upstream/master)
           ORIGIN_COMMIT=$(git rev-parse origin/master)
-          if [ "$UPSTREAM_COMMIT" != "$ORIGIN_COMMIT" ]; then
+          if [[ "$UPSTREAM_COMMIT" != "$ORIGIN_COMMIT" ]]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"

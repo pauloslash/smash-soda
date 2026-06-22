@@ -21,14 +21,22 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
-      - name: Instalar ATL (Visual Studio)
+      - name: Configurar ATL no INCLUDE
         shell: pwsh
         run: |
-          $vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
-          & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe" modify `
-            --installPath $vsPath `
-            --add Microsoft.VisualStudio.Component.VC.ATL `
-            --quiet --norestart --force
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = (& $vswhere -latest -property installationPath).Trim()
+          $msvcVersion = (Get-ChildItem "$vsPath\VC\Tools\MSVC" | Sort-Object Name -Descending | Select-Object -First 1).Name
+          $atlInclude = "$vsPath\VC\Tools\MSVC\$msvcVersion\atlmfc\include"
+          Write-Host "ATL path: $atlInclude"
+          Write-Host "Existe: $(Test-Path $atlInclude)"
+          if (Test-Path $atlInclude) {
+            echo "INCLUDE=$env:INCLUDE;$atlInclude" >> $env:GITHUB_ENV
+            Write-Host "ATL adicionado ao INCLUDE"
+          } else {
+            Write-Error "ATL nao encontrado"
+            exit 1
+          }
 
       - name: Instalar vcpkg
         run: |

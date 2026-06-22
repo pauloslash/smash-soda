@@ -5,6 +5,9 @@ on:
     branches: [ "master" ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -18,6 +21,15 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
+      - name: Instalar ATL (Visual Studio)
+        shell: pwsh
+        run: |
+          $vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe" modify `
+            --installPath $vsPath `
+            --add Microsoft.VisualStudio.Component.VC.ATL `
+            --quiet --norestart --force
+
       - name: Instalar vcpkg
         run: |
           git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
@@ -27,9 +39,10 @@ jobs:
       - name: Build Release x64
         run: msbuild ParsecSoda.sln /p:Configuration=Release /p:Platform=x64 /m
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Criar Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: smash-soda-windows
-          path: x64/Release/
-          if-no-files-found: warn
+          tag_name: build-${{ github.run_number }}
+          name: "Build #${{ github.run_number }}"
+          files: x64/Release/**
+          fail_on_unmatched_files: false

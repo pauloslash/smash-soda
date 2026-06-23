@@ -30,10 +30,27 @@ jobs:
       - name: Build Release x64
         run: msbuild ParsecSoda.sln /p:Configuration=Release /p:Platform=x64 /m /p:PlatformToolset=v145 /p:UseOfATL=Dynamic
 
+      - name: Compactar Release
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem "x64\Release\*.exe" | Select-Object -First 1
+          $version = ""
+          if ($exe) {
+            $v = $exe.VersionInfo.FileVersion
+            if ($v -and $v.Trim() -ne "" -and $v.Trim() -ne "0.0.0.0") {
+              $version = "-" + ($v.Trim() -replace "[, ]+", ".")
+            }
+          }
+          $zipName = "smash-soda$($version).zip"
+          $releaseName = "smash-soda$($version)"
+          Compress-Archive -Path "x64\Release\*" -DestinationPath $zipName
+          "ZIP_NAME=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "RELEASE_NAME=$releaseName" | Out-File -FilePath $env:GITHUB_ENV -Append
+
       - name: Criar Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
-          name: "Build #${{ github.run_number }}"
-          files: x64/Release/**
+          name: "${{ env.RELEASE_NAME }} #${{ github.run_number }}"
+          files: ${{ env.ZIP_NAME }}
           fail_on_unmatched_files: false

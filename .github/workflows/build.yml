@@ -28,15 +28,7 @@ jobs:
           C:\vcpkg\vcpkg integrate install
 
       - name: Build Release x64
-        shell: pwsh
-        run: |
-          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-          $vsPath = (& $vswhere -latest -property installationPath).Trim()
-          $msvcVersion = (Get-ChildItem "$vsPath\VC\Tools\MSVC" | Sort-Object Name -Descending | Select-Object -First 1).Name
-          $atlPath = "$vsPath\VC\Tools\MSVC\$msvcVersion\atlmfc\include"
-          Write-Host "ATL path: $atlPath"
-          $env:INCLUDE = "$env:INCLUDE;$atlPath"
-          msbuild ParsecSoda.sln /p:Configuration=Release /p:Platform=x64 /m
+        run: msbuild ParsecSoda.sln /p:Configuration=Release /p:Platform=x64 /m /p:UseOfATL=Dynamic
 
       - name: Criar Release
         uses: softprops/action-gh-release@v2

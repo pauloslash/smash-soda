@@ -1,0 +1,51 @@
+name: Sync com Upstream
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Buscar atualizações do upstream
+        run: |
+          git remote add upstream https://github.com/trybuchet/smash-soda.git
+          git fetch upstream
+
+      - name: Mesclar com upstream
+        id: merge
+        run: |
+          git merge upstream/master --no-edit
+          COUNT=$(git rev-list origin/master..HEAD --count)
+          echo "new_commits=$COUNT" >> $GITHUB_OUTPUT
+
+      - name: Enviar para origin
+        if: steps.merge.outputs.new_commits != '0'
+        run: git push origin master
+
+      - name: Disparar build
+        if: steps.merge.outputs.new_commits != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'build.yml',
+              ref: 'master'
+            })
